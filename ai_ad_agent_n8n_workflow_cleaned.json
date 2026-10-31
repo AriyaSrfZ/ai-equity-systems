@@ -249,7 +249,7 @@
         "sendBody": true,
         "contentType": "raw",
         "rawContentType": "application/json",
-        "body": "={ \"prompt\": \"{{ $json.Production.trim() }}\" }\n",
+        "body": "={{ JSON.stringify({ prompt: ($json.Production || '').trim() }) }}",
         "options": {
           "batching": {
             "batch": {
@@ -392,7 +392,7 @@
           },
           "conditions": [
             {
-              "id": "f7d0e73d-5e12-4a3d-bd0e-5077e959755d",
+              "id": "e89f2a71-4b36-4d1e-8e55-3d920387a27b",
               "leftValue": "={{ $json.response.status }}",
               "rightValue": "done",
               "operator": {
@@ -826,7 +826,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Input text\nconst text = $input.first().json.message.content;\n\n// Split into sections wherever there's a new line\nconst lines = text\n  .split('\\n')\n  .map(line => line.trim())\n  .filter(line => line.length > 0);\n\n// Return each line with an Index field\nreturn lines.map((line, index) => ({\n  json: {\n    paragraph: line,\n    Index: index\n  }\n}));"
+        "jsCode": "// Input text\nconst text = $input.first()?.json?.message?.content || \"\";\n\n// Split into sections wherever there's a new line\nconst lines = text\n  .split('\\n')\n  .map(line => line.trim())\n  .filter(line => line.length > 0);\n\n// Return each line with an Index field\nreturn lines.map((line, index) => ({\n  json: {\n    paragraph: line,\n    Index: index\n  }\n}));"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -839,7 +839,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Input text\nconst text = $input.first().json.message.content;\n\n// Split into sections wherever there's a new line\nconst lines = text\n  .split('\\n')\n  .map(line => line.trim())\n  .filter(line => line.length > 0);\n\n// Return each line as a separate item, adding an Index field\nreturn lines.map((line, index) => ({\n  json: {\n    paragraph: line,\n    Index: index\n  }\n}));"
+        "jsCode": "// Input text\nconst text = $input.first()?.json?.message?.content || \"\";\n\n// Split into sections wherever there's a new line\nconst lines = text\n  .split('\\n')\n  .map(line => line.trim())\n  .filter(line => line.length > 0);\n\n// Return each line as a separate item, adding an Index field\nreturn lines.map((line, index) => ({\n  json: {\n    paragraph: line,\n    Index: index\n  }\n}));"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -852,7 +852,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Input text\nconst text = $input.first().json.message.content;\n// Split into sections wherever there's a new line\nconst lines = text.split('\\n').map(line => line.trim()).filter(line => line.length > 0);\nreturn lines.map(line => ({ json: { paragraph: line } }));"
+        "jsCode": "// Input text\nconst text = $input.first()?.json?.message?.content || \"\";\n// Split into sections wherever there's a new line\nconst lines = text.split('\\n').map(line => line.trim()).filter(line => line.length > 0);\nreturn lines.map(line => ({ json: { paragraph: line } }));"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1343,7 +1343,7 @@
             "Environment": "=",
             "Script": "=",
             "Spokesperson": "=",
-            "Production": "=A casual video scene showing Robin — ({{ $('Create Character2').item.json.message.content }}) — giving a friendly on-camera review: {{ \n  $('Customer Testimonial').item.json['Question from the Off'] && \n  $('Customer Testimonial').item.json['Question from the Off'].trim() !== \"\" && \n  $json.Index === 0 \n    ? \"Important: A friendly male voice from behind the camera asks: \" + \n      $('Customer Testimonial').item.json['Question from the Off'] + \n      \"And Robin responds to the voice: \" \n    : \"\" \n}} {{ $('Code2').item.json.paragraph }}. Robin is relaxed, natural, and speaking with warmth and honesty, authentic — maybe smiling or chuckling. The scene takes place in a calm, everyday environment, which doesn´t change: {{ $('Create Location2').item.json.message.content }}. Use a consistent, realistic style, lighting, and camera angle to match previous shots. Avoid including detailed props or background elements that may vary between shots. No overlays, no subtitles, no text, no logos. If the paragraph is short, end with 2–3 seconds of Robin staying quite warmly or casually — pausing with a content look. Keep the camera work simple and intimate — as if a friend is filming them on a nice day. \n"
+            "Production": "=A casual video scene showing Robin — ({{ $('Create Character2').item.json.message.content }}) — giving a friendly on-camera review: {{ \n  $('Customer Testimonial').item.json['Question from the Off'] && \n  $('Customer Testimonial').item.json['Question from the Off'].trim() !== \"\" && \n  $json.Index === 0 \n    ? \"Important: A friendly male voice from behind the camera asks: \" + \n      $('Customer Testimonial').item.json['Question from the Off'] + \n      \". And Robin responds to the voice: \" \n    : \"\" \n}} {{ $('Code2').item.json.paragraph }}. Robin is relaxed, natural, and speaking with warmth and honesty, authentic — maybe smiling or chuckling. The scene takes place in a calm, everyday environment, which doesn´t change: {{ $('Create Location2').item.json.message.content }}. Use a consistent, realistic style, lighting, and camera angle to match previous shots. Avoid including detailed props or background elements that may vary between shots. No overlays, no subtitles, no text, no logos. If the paragraph is short, end with 2–3 seconds of Robin staying quite warmly or casually — pausing with a content look. Keep the camera work simple and intimate — as if a friend is filming them on a nice day. \n"
           },
           "matchingColumns": [
             "id"
@@ -1664,7 +1664,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const input = $input.first().json;\nconst inputData = $input.all();\n\nconst clipUrls = inputData.map(item => item.json.video?.url).filter(Boolean);\n\nlet selectedMusic = input['Background Music'];\nif (!selectedMusic) {\n  try { selectedMusic = $('Spokesperson').first()?.json?.['Background Music']; } catch (e) {}\n}\nif (!selectedMusic) {\n  try { selectedMusic = $('Customer Testimonial').first()?.json?.['Background Music']; } catch (e) {}\n}\nif (!selectedMusic) {\n  try { selectedMusic = $('Social Proof').first()?.json?.['Background Music']; } catch (e) {}\n}\n\n\n// Set music URL based on selection\nlet musicSrc = \"\";\n\nif (selectedMusic === \"Clean & Corporate - Polished, professional tone. Ideal for premium ads, SaaS, and business content.\") {\n  musicSrc = \"https://shotstack-assets.s3-ap-southeast-2.amazonaws.com/music/freepd/advertising.mp3\";\n  \n} else if (selectedMusic === \"Cinematic & Emotional - Smooth, cinematic energy with emotional depth. Great for storytelling and brand narratives.\") {\n  musicSrc = \"https://shotstack-assets.s3-ap-southeast-2.amazonaws.com/music/freepd/motions.mp3\";\n  \n} else if (selectedMusic === \"Uplifting & Celebratory - Bright and energetic. Perfect for product launches, highlights, or upbeat promos.\") {\n  musicSrc = \"https://shotstack-assets.s3-ap-southeast-2.amazonaws.com/music/freepd/fireworks.mp3\";\n  \n} else {\n  // fallback default\n  musicSrc = \"https://shotstack-assets.s3-ap-southeast-2.amazonaws.com/music/freepd/advertising.mp3\";\n}\n\n\nconst timeline = {\n  \n  soundtrack: {\n\nsrc: musicSrc,\n    \n\n    effect: \"fadeOut\", // optional: fades out music at the end\n    volume: 0.3,\n  },\n  tracks: [\n    {\n      clips: clipUrls.map((url, index) => ({\n        asset: {\n          type: \"video\",\n          src: url,\n        },\n        start: index * 7.5,\n        length: 8,\n        transition: {\n          ...(index !== 0 && { in: \"fade\" }),  // only add fade in if not first\n          out: \"fade\"\n        },\n          effect: \"zoomInSlow\"\n      })),\n    },\n  ],\n};\n\n\n\nreturn [\n  {\n    json: {\n      timeline,\n      output: {\n        format: \"mp4\",\n        resolution: \"hd\"\n      }\n    }\n  }\n];"
+        "jsCode": "const input = $input.first()?.json || {};\nconst inputData = $input.all();\n\nlet clipUrls = inputData.map(item => item.json?.video?.url).filter(Boolean);\nif (clipUrls.length === 0) {\n  try {\n    clipUrls = $('Get Video1').all().map(item => item.json?.video?.url).filter(Boolean);\n  } catch (e) {}\n}\n\nlet selectedMusic = input['Background Music'];\nif (!selectedMusic) {\n  try { selectedMusic = $('Spokesperson').first()?.json?.['Background Music']; } catch (e) {}\n}\nif (!selectedMusic) {\n  try { selectedMusic = $('Customer Testimonial').first()?.json?.['Background Music']; } catch (e) {}\n}\nif (!selectedMusic) {\n  try { selectedMusic = $('Social Proof').first()?.json?.['Background Music']; } catch (e) {}\n}\n\n\n// Set music URL based on selection\nlet musicSrc = \"\";\n\nif (selectedMusic === \"Clean & Corporate - Polished, professional tone. Ideal for premium ads, SaaS, and business content.\") {\n  musicSrc = \"https://shotstack-assets.s3-ap-southeast-2.amazonaws.com/music/freepd/advertising.mp3\";\n  \n} else if (selectedMusic === \"Cinematic & Emotional - Smooth, cinematic energy with emotional depth. Great for storytelling and brand narratives.\") {\n  musicSrc = \"https://shotstack-assets.s3-ap-southeast-2.amazonaws.com/music/freepd/motions.mp3\";\n  \n} else if (selectedMusic === \"Uplifting & Celebratory - Bright and energetic. Perfect for product launches, highlights, or upbeat promos.\") {\n  musicSrc = \"https://shotstack-assets.s3-ap-southeast-2.amazonaws.com/music/freepd/fireworks.mp3\";\n  \n} else {\n  // fallback default\n  musicSrc = \"https://shotstack-assets.s3-ap-southeast-2.amazonaws.com/music/freepd/advertising.mp3\";\n}\n\n\nconst timeline = {\n  \n  soundtrack: {\n\nsrc: musicSrc,\n    \n\n    effect: \"fadeOut\", // optional: fades out music at the end\n    volume: 0.3,\n  },\n  tracks: [\n    {\n      clips: clipUrls.map((url, index) => ({\n        asset: {\n          type: \"video\",\n          src: url,\n        },\n        start: index * 7.5,\n        length: 8,\n        transition: {\n          ...(index !== 0 && { in: \"fade\" }),  // only add fade in if not first\n          out: \"fade\"\n        },\n          effect: \"zoomInSlow\"\n      })),\n    },\n  ],\n};\n\n\n\nreturn [\n  {\n    json: {\n      timeline,\n      output: {\n        format: \"mp4\",\n        resolution: \"hd\"\n      }\n    }\n  }\n];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1677,7 +1677,7 @@
     },
     {
       "parameters": {
-        "jsCode": "//const input = $input.first().json;\nconst inputData = $input.all();\n\nconst clipUrls = inputData.map(item => item.json.video?.url).filter(Boolean);\n\n\n\n\n\nconst timeline = {\n  \n  \n  tracks: [\n    {\n      clips: clipUrls.map((url, index) => ({\n        asset: {\n          type: \"video\",\n          src: url,\n        },\n        start: index * 7.5,\n        length: 8,\n        transition: {\n          ...(index !== 0 && { in: \"fade\" }),  // only add fade in if not first\n          out: \"fade\"\n        },\n          effect: \"zoomInSlow\"\n      })),\n    },\n  ],\n};\n\n\n\nreturn [\n  {\n    json: {\n      timeline,\n      output: {\n        format: \"mp4\",\n        resolution: \"hd\"\n      }\n    }\n  }\n];"
+        "jsCode": "const inputData = $input.all();\n\nlet clipUrls = inputData.map(item => item.json?.video?.url).filter(Boolean);\nif (clipUrls.length === 0) {\n  try {\n    clipUrls = $('Get Video1').all().map(item => item.json?.video?.url).filter(Boolean);\n  } catch (e) {}\n}\n\n\n\n\n\nconst timeline = {\n  \n  \n  tracks: [\n    {\n      clips: clipUrls.map((url, index) => ({\n        asset: {\n          type: \"video\",\n          src: url,\n        },\n        start: index * 7.5,\n        length: 8,\n        transition: {\n          ...(index !== 0 && { in: \"fade\" }),  // only add fade in if not first\n          out: \"fade\"\n        },\n          effect: \"zoomInSlow\"\n      })),\n    },\n  ],\n};\n\n\n\nreturn [\n  {\n    json: {\n      timeline,\n      output: {\n        format: \"mp4\",\n        resolution: \"hd\"\n      }\n    }\n  }\n];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,

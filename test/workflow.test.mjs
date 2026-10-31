@@ -233,3 +233,134 @@ test('12. Asset integrity: video examples and setup documents exist and are vali
     }
   }
 });
+
+test('13. Condition UUID uniqueness: all condition nodes define distinct UUIDs', () => {
+  const conditionNodes = ['Switch', 'If', 'If12'];
+  const allConditionIds = [];
+
+  for (const name of conditionNodes) {
+    const node = nodesByName.get(name);
+    assert.ok(node, `Node ${name} must exist`);
+    if (node.type === 'n8n-nodes-base.switch') {
+      const rules = node.parameters?.rules?.values || [];
+      for (const rule of rules) {
+        for (const cond of rule.conditions?.conditions || []) {
+          allConditionIds.push({ nodeName: name, id: cond.id });
+        }
+      }
+    } else if (node.type === 'n8n-nodes-base.if') {
+      const conds = node.parameters?.conditions?.conditions || [];
+      for (const cond of conds) {
+        allConditionIds.push({ nodeName: name, id: cond.id });
+      }
+    }
+  }
+
+  const seenIds = new Set();
+  for (const item of allConditionIds) {
+    assert.match(item.id, /^[0-9a-f-]{36}$/i, `Condition ID "${item.id}" in ${item.nodeName} must be a valid UUID`);
+    assert.ok(!seenIds.has(item.id), `Duplicate condition ID "${item.id}" found in ${item.nodeName}`);
+    seenIds.add(item.id);
+  }
+});
+
+test('14. Create Video1 node: prompt serialization handles quotes, newlines, and empty inputs', () => {
+  const createVideoNode = nodesByName.get('Create Video1');
+  assert.ok(createVideoNode, 'Create Video1 node must exist');
+  assert.equal(createVideoNode.parameters.contentType, 'raw');
+  assert.equal(createVideoNode.parameters.rawContentType, 'application/json');
+
+  const bodyExpr = createVideoNode.parameters.body;
+  assert.ok(bodyExpr.includes('JSON.stringify'), 'Create Video1 body should use JSON.stringify for safe payload serialization');
+
+  const exprCode = bodyExpr.startsWith('=') ? bodyExpr.slice(1).trim() : bodyExpr;
+
+  const testCases = [
+    { Production: 'A scene showing Robin: "Hello world!"\nSecond line with dialogue.' },
+    { Production: '   Trimmed prompt with surrounding whitespace   \n' },
+    { Production: null },
+    { Production: undefined }
+  ];
+
+  for (const item of testCases) {
+    const context = { $json: item };
+    vm.createContext(context);
+    const serializedBody = vm.runInContext(exprCode.replace(/^\{\{([\s\S]+)\}\}$/, '$1'), context);
+    assert.equal(typeof serializedBody, 'string');
+    const parsed = JSON.parse(serializedBody);
+    assert.ok(parsed && typeof parsed === 'object');
+    assert.ok('prompt' in parsed);
+    if (item.Production) {
+      assert.equal(parsed.prompt, item.Production.trim());
+    } else {
+      assert.equal(parsed.prompt, '');
+    }
+  }
+});
+
+test('15. Code4 & Code5 nodes: fallback to $(\'Get Video1\').all() when inputData lacks video URLs', () => {
+  const code4 = nodesByName.get('Code4');
+  const code5 = nodesByName.get('Code5');
+
+  const fallbackVideos = [
+    { json: { video: { url: 'https://fal.media/fallback_clip1.mp4' } } },
+    { json: { video: { url: 'https://fal.media/fallback_clip2.mp4' } } }
+  ];
+
+  const makeContext = (emptyInput = true) => ({
+    $input: {
+      first: () => ({ json: {} }),
+      all: () => (emptyInput ? [{ json: { id: 1 } }, { json: { id: 2 } }] : fallbackVideos)
+    },
+    $: (nodeName) => {
+      if (nodeName === 'Get Video1') {
+        return { all: () => fallbackVideos };
+      }
+      return { first: () => ({ json: {} }) };
+    }
+  });
+
+  // Verify Code4 recovers fallback
+  const ctx4 = makeContext(true);
+  vm.createContext(ctx4);
+  const res4 = vm.runInContext(`(() => { ${code4.parameters.jsCode} })()`, ctx4);
+  assert.equal(res4[0].json.timeline.tracks[0].clips.length, 2);
+  assert.equal(res4[0].json.timeline.tracks[0].clips[0].asset.src, 'https://fal.media/fallback_clip1.mp4');
+
+  // Verify Code5 recovers fallback
+  const ctx5 = makeContext(true);
+  vm.createContext(ctx5);
+  const res5 = vm.runInContext(`(() => { ${code5.parameters.jsCode} })()`, ctx5);
+  assert.equal(res5[0].json.timeline.tracks[0].clips.length, 2);
+  assert.equal(res5[0].json.timeline.tracks[0].clips[0].asset.src, 'https://fal.media/fallback_clip1.mp4');
+});
+
+test('16. Code1, Code2 & Code3 nodes: safely handle missing or empty message content without crashing', () => {
+  for (const name of ['Code1', 'Code2', 'Code3']) {
+    const codeNode = nodesByName.get(name);
+    const jsCode = codeNode.parameters?.jsCode;
+
+    const invalidInputs = [
+      { $input: { first: () => ({ json: {} }) } },
+      { $input: { first: () => ({ json: { message: null } }) } },
+      { $input: { first: () => ({ json: { message: { content: '' } } }) } }
+    ];
+
+    for (const context of invalidInputs) {
+      vm.createContext(context);
+      const result = vm.runInContext(`(() => { ${jsCode} })()`, context);
+      assert.ok(Array.isArray(result), `${name} should return array even on empty input`);
+      assert.equal(result.length, 0, `${name} should return 0 items for empty input`);
+    }
+  }
+});
+
+test('17. Log the Idea5: prompt template preserves sentence boundary for off-camera question', () => {
+  const log5 = nodesByName.get('Log the Idea5');
+  assert.ok(log5, 'Log the Idea5 must exist');
+  const productionExpr = log5.parameters?.columns?.value?.Production || '';
+  assert.ok(
+    productionExpr.includes('. And Robin responds to the voice:'),
+    'Log the Idea5 must contain a period and space before "And Robin responds to the voice:"'
+  );
+});
