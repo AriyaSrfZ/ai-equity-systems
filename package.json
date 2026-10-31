@@ -1,0 +1,17 @@
+{
+  "name": "ai-equity-systems",
+  "version": "1.0.0",
+  "description": "AI Ad Agent n8n workflow and ad generation pipeline",
+  "type": "module",
+  "scripts": {
+    "test": "node --test --test-reporter=tap test/*.test.mjs"
+  },
+  "keywords": [
+    "n8n",
+    "ai-ad-agent",
+    "veo3",
+    "shotstack",
+    "workflow"
+  ],
+  "license": "MIT"
+}

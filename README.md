@@ -9,6 +9,13 @@ for an AI-powered video ad generation pipeline.
 - User guide
 - Ad examples
 
+## Testing & Verification
+Run the automated test suite to validate workflow JSON syntax, node integrity, routing rules, and code execution:
+```bash
+npm test
+```
+
 ## Notes
 - This workflow is shared for educational and experimentation purposes.
 - No signup or payment is required to access these files.
+
